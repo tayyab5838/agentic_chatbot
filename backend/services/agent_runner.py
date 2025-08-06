@@ -1,65 +1,19 @@
 # backend/services/agent_runner.py
-from agents import Agent, Runner, OpenAIChatCompletionsModel, AsyncOpenAI, GuardrailFunctionOutput, InputGuardrail, ItemHelpers, function_tool, enable_verbose_stdout_logging # type: ignore
-from agents.run import RunConfig
-from agents.exceptions import InputGuardrailTripwireTriggered
+from agents import Agent, Runner, GuardrailFunctionOutput, InputGuardrail, ItemHelpers, enable_verbose_stdout_logging # type: ignore
 from openai.types.responses import ResponseTextDeltaEvent
-from dotenv import load_dotenv
-from pydantic import BaseModel
-import os
-from ..helpers.prompt_loader import load_prompt
-from ..tools import add, get_weather, get_stock_price
 import json
 import asyncio
+
+from ..helpers.prompt_loader import load_prompt
+from ..tools import add, get_weather, get_stock_price
+from ..agents import history_tutor_agent, math_tutor_agent
+from ..agents import guardrail_agent, ControversialType
+from ..helpers.config import run_config
+
+
 enable_verbose_stdout_logging()
 
-load_dotenv()
-
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-
-if not gemini_api_key:
-    raise ValueError("api key not set")
-
 triage_prompt = load_prompt("prompts/triage_agent_prompt.md")
-
-external_client = AsyncOpenAI(
-    api_key = gemini_api_key,
-    base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
-)
-
-model = OpenAIChatCompletionsModel(
-    model="gemini-2.5-flash",
-    openai_client = external_client
-)
-
-run_config = RunConfig(
-    model=model,
-    model_provider=external_client, # type: ignore
-    tracing_disabled=True
-)
-
-class ControversialType(BaseModel):
-    is_controversial: bool
-    reasoning: str
-
-
-guardrail_agent = Agent(
-    name="Guardrail check",
-    instructions="Check if the user is asking about a politically controversial question",
-    output_type=ControversialType
-)
-
-history_tutor_agent = Agent(
-    name="History Tutor",
-    handoff_description="Specialist agent for historical questions",
-    instructions="You provide assistance with historical queries. Explain important events and context clearly."
-)
-
-math_tutor_agent = Agent(
-    name="Math Tutor",
-    handoff_description="Specialist agent for math questions",
-    instructions="You provide help with math problems. Explain your reasoning at each step and include examples"
-)
-
 
 
 
@@ -76,7 +30,7 @@ triage_agent = Agent(
     name="Triage Agent",
     instructions=triage_prompt,
     handoffs=[history_tutor_agent, math_tutor_agent],
-    tools=[get_weather, get_stock_price],
+    tools=[get_weather, get_stock_price, add],
     input_guardrails=[
         InputGuardrail(guardrail_function=controversial_guardrail),
     ],
