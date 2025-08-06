@@ -17,8 +17,8 @@ This project combines **FastAPI** and **OpenAI Agent SDK** to build a backend LL
 ## Quick Start
 1. Clone the Repo
 
-- git clone https://github.com/yourusername/agent-fastapi-streaming.git
-- cd agent-fastapi-streaming
+- git clone https://github.com/tayyab5838/agentic_chatbot.git
+- cd agentic_chatbot
 
 2. Setup Environment with uv
 
